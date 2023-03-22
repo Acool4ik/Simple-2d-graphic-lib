@@ -1,0 +1,5 @@
+./src/*.o
+main
+result.png
+*.o
+*.out

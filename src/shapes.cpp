@@ -1,5 +1,5 @@
 #include "../inc/shapes.hpp"
-#include <iostream> // for debug
+#include <cmath>
 
 using namespace shapes;
 using cfloat    = const float;
@@ -12,7 +12,7 @@ inline auto pow2(T x) { return std::pow(x, 2); }
 Shape::Shape(std::shared_ptr<RastrumImage> rimage, rgba_t clr)
     : rimage_(rimage), clr_(clr) {}
 
-const std::shared_ptr<RastrumImage> Shape::getRastrumImage() const noexcept
+std::shared_ptr<const RastrumImage> Shape::getRastrumImage() const noexcept
 {   return rimage_; }
 
 rgba_t Shape::getClr() const noexcept
@@ -34,11 +34,13 @@ void Circle::draw()
 
     for (int32_t x = -px_r; x <= px_r; x++)
     for (int32_t y = -px_r; y <= px_r; y++)
+    {
         if (pow2(x) + pow2(y) <= pow2(px_r))
             rimage_->setPixel(x + px_xc, y + px_yc, clr_);
+    }
 }
 
-Circle::~Circle() noexcept
+Circle::~Circle()
 {   if (!drawed_) draw();   }
 
 bool Circle::isIntersect(Circle const& cir) const noexcept
@@ -76,7 +78,7 @@ void Rectangle::draw()
         rimage_->setPixel(x, y, clr_);
 }
 
-Rectangle::~Rectangle() noexcept
+Rectangle::~Rectangle()
 {   if (!drawed_) draw();   }
 
 bool Rectangle::isIntersect(Circle const& cir) const noexcept
@@ -91,7 +93,6 @@ bool Rectangle::isBelongPoint(float x, float y) const noexcept
 
 bool shapes::is_intersect(Circle const& cir1, Circle const& cir2)
 {
-    std::cout << "(Circle x Circle)\n";
     cfloat dxc  = cir1.xc_ - cir2.xc_;
     cfloat dyc  = cir1.yc_ - cir2.yc_;
     cfloat sumr = cir1.r_ + cir2.r_;
@@ -99,7 +100,6 @@ bool shapes::is_intersect(Circle const& cir1, Circle const& cir2)
 }
 bool shapes::is_intersect(Circle const& cir, Rectangle const& rec)
 {
-    std::cout << "(Circle x Rectangle)\n";
     cfloat dxc  = std::abs(cir.xc_ - (rec.x_ + rec.w_ / 2.0f));
     cfloat dyc  = std::abs(cir.yc_ - (rec.y_ + rec.h_ / 2.0f));
     cfloat drig = dxc - rec.w_ / 2.0f;
@@ -116,7 +116,6 @@ bool shapes::is_intersect(Circle const& cir, Rectangle const& rec)
 }
 bool shapes::is_intersect(Rectangle const& rec1, Rectangle const& rec2)
 {
-    std::cout << "(Rectangle x Rectangle)\n";
     cfloat dxc = std::abs((rec1.x_ + rec1.w_ / 2.0f) - (rec2.x_ + rec2.w_ / 2.0f));
     cfloat dyc = std::abs((rec1.y_ + rec1.h_ / 2.0f) - (rec2.y_ + rec2.h_ / 2.0f));
     cfloat dw = (rec1.w_ / 2.0f) - (dxc - rec2.w_ / 2.0f);
@@ -124,8 +123,7 @@ bool shapes::is_intersect(Rectangle const& rec1, Rectangle const& rec2)
     return dw >= 0 && dh >= 0;
 }
 
-std::pair<float,float> shapes::pixelToFloat(std::pair<uint32_t,uint32_t> size,
-    uint32_t px_x, uint32_t px_y) noexcept
+pf32_t shapes::pixelToFloat(pf32_t size, uint32_t px_x, uint32_t px_y) noexcept
 {
     const auto [width, height] = size;
     const auto square = std::min(width, height);
@@ -140,12 +138,14 @@ bool shapes::unionPixelSet(std::vector<bool>& pset, Shape const& sh)
     bool isInter = false;
 
     for (size_t i = 0; i < pset.size(); i++)
-    if (pset[i])
     {
-        cuint32_t px_x = i % size.first;
-        cuint32_t px_y = i / size.first;
-        const auto [x,y] = pixelToFloat(size, px_x, px_y);
-        sh.isBelongPoint(x,y) ? (isInter = true) : (pset[i] = false);
+        if (pset[i])
+        {
+            cuint32_t px_x = i % size.first;
+            cuint32_t px_y = i / size.first;
+            const auto [x,y] = pixelToFloat(size, px_x, px_y);
+            sh.isBelongPoint(x,y) ? (isInter = true) : (pset[i] = false);
+        }
     }
 
     return isInter;
@@ -161,17 +161,22 @@ bool shapes::unionPixelSet(std::vector<bool>& pset,
     bool isBitmap = bmap.size() == vsh.size();
 
     for (size_t i = 0; i < pset.size(); i++)
-    if (pset[i] )
     {
-        bool isBelong = true;
-        cuint32_t px_x = i % size.first;
-        cuint32_t px_y = i / size.first;
-        const auto [x,y] = pixelToFloat(size, px_x, px_y);
+        if (pset[i])
+        {
+            bool isBelong = true;
+            cuint32_t px_x = i % size.first;
+            cuint32_t px_y = i / size.first;
+            const auto [x,y] = pixelToFloat(size, px_x, px_y);
 
-        for (size_t j = 0; j < vsh.size() && isBelong; j++)
-            if ((isBitmap && bmap[j]) || !isBitmap)
-                isBelong = vsh[j]->isBelongPoint(x,y);
-        isBelong ? (isInter = true) : (pset[i] = false);
+            for (size_t j = 0; j < vsh.size() && isBelong; j++)
+            {
+                if ((isBitmap && bmap[j]) || !isBitmap)
+                    isBelong = vsh[j]->isBelongPoint(x,y);
+            }
+
+            isBelong ? (isInter = true) : (pset[i] = false);
+        }
     }
 
     return isInter;

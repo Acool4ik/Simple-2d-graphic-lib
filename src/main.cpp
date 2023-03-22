@@ -63,15 +63,17 @@ int main()
     // STEP4* (advansed): visualisation of inclusion–exclusion principle
     std::vector<bool> used(shapes.size(), false);
     std::vector<bool> pixelSet1(w * h, true);
-    std::function<void()> intersect = [&canvas,&shapes,&used,&pixelSet1]()
+    auto intersect = [&]()
     {
         pixelSet1.assign(pixelSet1.size(), true);
         if (unionPixelSet(pixelSet1, shapes, used))
         {
             rgba_t mixClr = {0,0,0,0};
             for (size_t i = 0; i < used.size(); i++)
-                if (used[i] == true)
+            {
+                if (used[i])
                     mixClr = clrs::mixClrs(mixClr, shapes[i]->getClr());
+            }
             canvas->setPixelSet(pixelSet1, clrs::gammaCorr(mixClr));
         }
     };

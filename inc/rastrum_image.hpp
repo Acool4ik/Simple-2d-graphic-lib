@@ -9,7 +9,7 @@
 namespace rastrum_image {
 
 using pu32_t = std::pair<uint32_t, uint32_t>;
-struct rgb_t { uint8_t r,g,b; };
+using pf32_t = std::pair<float, float>;
 struct rgba_t { uint8_t r,g,b,a=255; };
 
 struct Visitor;
@@ -22,9 +22,15 @@ struct RastrumImage
     virtual void load() = 0;
     virtual void save() = 0;
     virtual void visit(Visitor const& vis) = 0;
-    virtual ~RastrumImage() noexcept {}
+    virtual ~RastrumImage() = default;
 
-    std::pair<uint32_t, uint32_t> getSize() const noexcept;
+    RastrumImage() = delete;
+    RastrumImage(RastrumImage const& rimage) = delete;
+    RastrumImage(RastrumImage && rimage) = delete;
+    RastrumImage& operator=(RastrumImage const& rimage) = delete;
+    RastrumImage& operator=(RastrumImage && rimage) = delete;
+
+    pu32_t getSize() const noexcept;
     std::string const& getName() const noexcept;
     void setPixelSet(std::unordered_set<pu32_t> const& pset, rgba_t clr);
     void setPixelSet(std::vector<bool> const& pset, rgba_t clr);
@@ -49,7 +55,7 @@ struct PngImage final : RastrumImage
     void save() override;
     void visit(Visitor const& vis) override;
 
-    ~PngImage() noexcept override;
+    ~PngImage() override;
 private:
     FILE * fp_;
     png_struct * png_;
@@ -96,8 +102,8 @@ inline rgba_t mixClrs(rgba_t clr1, rgba_t clr2) noexcept
 
     if (std::abs(a1 + a2) == 0) return {0,0,0,0};
 
-    cfloat alpha1 = a1 / (float)(a1 + a2);
-    cfloat alpha2 = a2 / (float)(a1 + a2);
+    cfloat alpha1 = a1 / static_cast<float>(a1 + a2);
+    cfloat alpha2 = a2 / static_cast<float>(a1 + a2);
 
     auto mix = [alpha1,alpha2](uint8_t c1, uint8_t c2)
     {   return static_cast<uint8_t>(c1*alpha1 + c2*alpha2); };
@@ -112,10 +118,12 @@ inline rgba_t mixClrs(rgba_t clr1, rgba_t clr2) noexcept
 // impl hash for "setPixelSet" method
 namespace std {
 
+using pu32_t = ::rastrum_image::pu32_t;
+
 template<>
-struct hash<std::pair<uint32_t,uint32_t>>
+struct hash<pu32_t>
 {
-    size_t operator()(std::pair<uint32_t,uint32_t> const& pu32) const noexcept
+    size_t operator()(pu32_t const& pu32) const noexcept
     {
         const auto [x, y] = pu32;
         const size_t h1 = std::hash<std::uint32_t>{}(x);

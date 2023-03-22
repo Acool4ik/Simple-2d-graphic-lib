@@ -33,18 +33,18 @@ PngImage::PngImage(std::string const& fname, uint32_t width, uint32_t height, rg
 {
     fp_ = fopen(fname_.c_str(), "wb");
     if(!fp_)
-        throw std::runtime_error("open file");
+        throw std::runtime_error("Error: bad open file");
 
     png_ = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
     if (!png_)
-        throw std::runtime_error("png_create_write_struct");
+        throw std::runtime_error("Error: ret errcode from png_create_write_struct");
 
     info_ = png_create_info_struct(png_);
     if (!info_)
-        throw std::runtime_error("png_create_info_struct");
+        throw std::runtime_error("Error: ret errcode from png_create_info_struct");
 
     if (setjmp(png_jmpbuf(png_)))
-        throw std::runtime_error("setjmp");
+        throw std::runtime_error("Error: ret errcode from setjmp");
 
     png_init_io(png_, fp_);
 
@@ -63,14 +63,9 @@ PngImage::PngImage(std::string const& fname, uint32_t width, uint32_t height, rg
     png_write_info(png_, info_);
 
     // allocate memory for IDAT chunk
-    row_pointers_ = static_cast<png_byte **>(malloc(sizeof(png_byte *) * height));
-    if (!row_pointers_) std::bad_alloc();
-
+    row_pointers_ = new png_byte * [sizeof(png_byte *) * height];
     for(uint32_t y = 0; y < height; y++)
-    {
-        row_pointers_[y] = static_cast<png_byte *>(malloc(png_get_rowbytes(png_, info_)));
-        if (!row_pointers_[y]) std::bad_alloc();
-    }
+        row_pointers_[y] = new png_byte [png_get_rowbytes(png_, info_)];
 
     for (uint32_t y = 0; y < height; y++)
     for (uint32_t x = 0; x < width; x++)
@@ -106,13 +101,13 @@ rgba_t PngImage::getPixel(uint32_t x, uint32_t y) const noexcept
     return {px[0], px[1], px[2], px[3]};
 }
 
-PngImage::~PngImage() noexcept
+PngImage::~PngImage()
 {
     if (!saved_) save();
 
     for(uint32_t y = 0; y < height_; y++)
-        free(row_pointers_[y]);
-    free(row_pointers_);
+        delete [] row_pointers_[y];
+    delete [] row_pointers_;
 
     fclose(fp_);
     png_destroy_write_struct(&png_, &info_);

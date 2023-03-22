@@ -1,6 +1,5 @@
 #pragma once
 #include <memory>
-#include <cmath>
 #include "rastrum_image.hpp"
 
 namespace shapes {
@@ -9,22 +8,29 @@ namespace {
 
 using RastrumImage  = ::rastrum_image::RastrumImage;
 using rgba_t        = ::rastrum_image::rgba_t;
+using pf32_t        = ::rastrum_image::pf32_t;
 
 } // namespace
 
 struct Circle;
 struct Rectangle;
 
-struct Shape
+class Shape
 {
+public:
     virtual void draw() = 0;
     virtual bool isIntersect(Shape const& sh) const noexcept = 0;
     virtual bool isIntersect(Circle const& cir) const noexcept = 0;
     virtual bool isIntersect(Rectangle const& rec) const noexcept = 0;
     virtual bool isBelongPoint(float x, float y) const noexcept = 0;
-    virtual ~Shape() noexcept = default;
+    virtual ~Shape() = default;
 
-    const std::shared_ptr<RastrumImage> getRastrumImage() const noexcept;
+    Shape(Shape const& sh) = delete;
+    Shape(Shape && sh) = delete;
+    Shape& operator=(Shape const& sh) = delete;
+    Shape& operator=(Shape && sh) = delete;
+
+    std::shared_ptr<const RastrumImage> getRastrumImage() const noexcept;
     rgba_t getClr() const noexcept;
 protected:
     Shape(std::shared_ptr<RastrumImage> rimage, rgba_t clr);
@@ -33,11 +39,12 @@ protected:
     bool drawed_ = false;
 };
 
-struct Circle final : Shape
+class Circle final : public Shape
 {
+public:
     Circle(std::shared_ptr<RastrumImage> rimage,
            float xc, float yc, float r, rgba_t clr);
-    ~Circle() noexcept override;
+    ~Circle() override;
 
     void draw() override;
     bool isIntersect(Shape const& sh) const noexcept override;
@@ -52,11 +59,12 @@ private:
     float xc_, yc_, r_;
 };
 
-struct Rectangle final : Shape
+class Rectangle final : public Shape
 {
+public:
     Rectangle(std::shared_ptr<RastrumImage> rimage,
               float x, float y, float w, float h, rgba_t clr);
-    ~Rectangle() noexcept override;
+    ~Rectangle() override;
 
     void draw() override;
     bool isIntersect(Shape const& sh) const noexcept override;
@@ -75,11 +83,11 @@ bool is_intersect(Circle const& cir1, Circle const& cir2);
 bool is_intersect(Circle const& cir, Rectangle const& rec);
 bool is_intersect(Rectangle const& rec1, Rectangle const& rec2);
 
-std::pair<float,float> pixelToFloat(std::pair<uint32_t,uint32_t> size,
-                                    uint32_t px_x, uint32_t px_y) noexcept;
+pf32_t pixelToFloat(pf32_t size, uint32_t px_x, uint32_t px_y) noexcept;
 
 bool unionPixelSet(std::vector<bool>& pset, Shape const& sh);
-bool unionPixelSet(std::vector<bool>& pset, std::vector<std::shared_ptr<Shape>> const& vsh,
+bool unionPixelSet(std::vector<bool>& pset,
+                   std::vector<std::shared_ptr<Shape>> const& vsh,
                    std::vector<bool> const& bmap = {});
 
 } // namespace shapes
