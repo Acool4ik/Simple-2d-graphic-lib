@@ -17,3 +17,6 @@ build_debug: $(SRC) $(INC)
 
 clean:
 	-rm $(OBJ) $(IMG) ./main 2>/dev/null
+
+format:
+	clang-format -i ./src/*.cpp ./inc/*.hpp
